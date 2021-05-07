@@ -7,9 +7,10 @@ import base64
 from PIL import Image
 
 from processing import get_components, process_image
+from calculator import latexEval
 
 # df = pd.read_csv('C:\\Users\\dpati\\OneDrive\\Desktop\\datapart\\data\\savedata\\dict.csv', delimiter=',', header=None)
-from network.calculator import latexEval
+
 
 df = pd.read_csv('dict.csv', delimiter=',', header=None)
 key = dict(zip(df.iloc[:, 0], df.iloc[:, 1]))
