@@ -81,7 +81,9 @@ def get_components(labels, pad_width=3, erosion_percent=0.4, show=True):
                       'pic': None,
                       'group': None,
                       'sup': False,
-                      'sub': False}
+                      'sub': False,
+                      'num': False,
+                      'deno': False}
                   for i in range(1, len(np.unique(labels)))}
     # fig, axes = plt.subplots(2, int((len(components) + 1) / 2), figsize=(15, 5))
     # for i, ax in zip(sorted(components.keys()), axes.ravel()):

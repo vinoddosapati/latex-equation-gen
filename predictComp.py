@@ -5,10 +5,11 @@ import cv2
 from io import BytesIO
 import base64
 from PIL import Image
+
 from processing import get_components, process_image
 
 # df = pd.read_csv('C:\\Users\\dpati\\OneDrive\\Desktop\\datapart\\data\\savedata\\dict.csv', delimiter=',', header=None)
-from calculator import latexEval
+from network.calculator import latexEval
 
 df = pd.read_csv('dict.csv', delimiter=',', header=None)
 key = dict(zip(df.iloc[:, 0], df.iloc[:, 1]))
@@ -65,6 +66,7 @@ def assign_group(components, offset_threshold=3):
         if height[0] + offset_threshold < groups[-1][1]:
             groups[-1][1] = max(height[1], groups[-1][1])
         else:
+            # groups[-1][1] = max(height[1], groups[-1][1])
             groups.append(height)
     for i in components:
         for group in groups:
@@ -85,23 +87,114 @@ def detect_script(components, groups):
         if len(bottoms) == 1: continue
         for i in components:
             if components[i]['group'] == g:
-                s = (bottoms_mean - components[i]['br'][0]) / bottoms_std - (components[i]['tl'][0] - tops_mean) / tops_std
-                print(s, "--", i, " component : ", components[i]['output'])
-                if s > 2.5:
+                z_score_bottom = (bottoms_mean - components[i]['br'][0]) / bottoms_std
+                z_score_top = (components[i]['tl'][0] - tops_mean) / tops_std
+                s = z_score_bottom - z_score_top
+                print(s, "--", i, " component : ", components[i]['output'], "zbtm ",z_score_bottom, " ztop ", z_score_top, " zscore :", s)
+                if s > 2.35:
                     components[i]['sup'] = True
-                elif s < -2.5:
-                    components[i]['sub'] = True
+                # elif s < -2.5:
+                    # components[i]['sub'] = True
     return components
+
+def finffrac(components, groups):
+    l_order = sorted(components.keys(), key=lambda x: components[x]['tl'][1])
+    for i in range(len(l_order)):
+        if (components[l_order[i]]['output'] == '-'):
+            idx = i
+            minus_range = [components[l_order[idx]]["tl"][1], components[l_order[idx]]["br"][1]]
+            comp_range = [components[l_order[i+1]]["tl"][1], components[l_order[i+1]]["br"][1]]
+            if(minus_range[0] <= comp_range[0] <= comp_range[1] <= minus_range[1] and components[l_order[idx]]['group'] == components[l_order[i+1]]['group']):
+                print("old ", components[l_order[idx]]['output'])
+                components[l_order[idx]]['output'] = '\\frac'
+                print("new ", components[l_order[idx]]['output'])
+    return components
+
+
+def neworder(components, groups):
+    components = finffrac(components, groups)
+    print("new com ", components)
+    l_order = sorted(components.keys(), key=lambda x: components[x]['tl'][1])
+    order = [components[i]["output"] for i in l_order]
+    print("lorder ",l_order)
+    print("order ", order)
+    num = []
+    denom = []
+    frac = 0
+    s = []
+    idx = 0
+    for i in l_order:
+        if(components[i]["output"] == '\\frac' and frac==0):
+            s.append(i)
+            idx = i
+            frac = 1
+            continue
+        elif(frac and components[idx]['group'] == components[i]['group']):
+            minus_range = [components[idx]["tl"][1], components[idx]["br"][1]]
+            comp_range = [components[i]["tl"][1], components[i]["br"][1]]
+            if(minus_range[0] <= comp_range[0] <= comp_range[1] <= minus_range[1] and components[idx]['group'] == components[i]['group']):
+                components[i]['sup'] = False
+                components[i]['sub'] = False
+                print("its frac ", components[i]["output"])
+                if(components[idx]["tl"][0] < components[i]["tl"][0]):
+                    print("its denmo ", components[i]["output"])
+                    denom.append(i)
+                else:
+                    print("its num ", components[i]["output"])
+                    num.append(i)
+            else:
+                new_num = [components[j]["output"] for j in num]
+                new_den = [components[j]["output"] for j in denom]
+                print("new num ", new_num, " new den ", new_den)
+                frac = 0
+                components[num[0]]['output'] = '{' + components[num[0]]['output']
+                components[num[-1]]['output'] = components[num[-1]]['output'] + '}'
+                components[denom[0]]['output'] = '{' + components[denom[0]]['output']
+                components[denom[-1]]['output'] = components[denom[-1]]['output'] + '}'
+
+                s += num
+                s += denom
+                num = []
+                denom = []
+                print("terminate,", components[i]["output"])
+                s.append(i)
+        else:
+            s.append(i)
+    if(len(num) or len(denom)):
+        frac = 0
+        components[num[0]]['output'] = '{' + components[num[0]]['output']
+        components[num[-1]]['output'] = components[num[-1]]['output'] + '}'
+        components[denom[0]]['output'] = '{' + components[denom[0]]['output']
+        components[denom[-1]]['output'] = components[denom[-1]]['output'] + '}'
+        new_num = [components[j]["output"] for j in num]
+        new_den = [components[j]["output"] for j in denom]
+        print("new num ", new_num, " new den ", new_den)
+        s += num
+        s += denom
+        num = []
+        denom = []
+    print("s =", s)
+    print("num =",num,"denom =" ,denom)
+    return s
+
+
+
 
 
 def construct_latex(components, groups):
     lr_order = sorted(components.keys(), key=lambda x: components[x]['tl'][1])
+    order = [components[i]["output"] for i in lr_order]
+    print("order ",order)
+    lr_order = neworder(components, groups)
+    order = [components[i]["output"] for i in lr_order]
+    print("after order ", order)
     vsep = {tuple(group): [] for group in groups}
     print(type(vsep))
     print(vsep)
     MODE_SUP = set()
     MODE_SUB = set()
     MODE_SQRT = {}
+
 
     for l in lr_order:
         t, left = components[l]['tl']
@@ -130,8 +223,12 @@ def construct_latex(components, groups):
                     MODE_SQRT[g] = right
                     vsep[g].append('{')
                 break
+
+    print("MODE SQRT, ", print(MODE_SQRT))
     for i in MODE_SQRT:
         vsep[i].append('}')
+    for j in MODE_SUP:
+        vsep[j].append('}')
     for g in vsep:
         vsep[g] = ''.join(vsep[g])
 
@@ -143,9 +240,11 @@ def construct_latex(components, groups):
     else:
         final = list(vsep.values())[0]
     final = final.replace(" ", "")
+    final = final.replace("\lambda", "\lambda ")
     return final
 
 #
+
 # # read in image
 # # file_name_X = '../imageprocess/download (2).png'
 # # X = (mpimg.imread(file_name_X)[:, :, 0:3]).reshape(-1, 3)

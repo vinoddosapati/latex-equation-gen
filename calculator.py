@@ -3,6 +3,7 @@ import math
 def preProcess(s):
     # For Mul
     s = s.replace("\\times", '*')
+    s = s.replace("x", '*')
     # For power
     s = s.replace("^", "**")
     # For square-root
@@ -11,6 +12,10 @@ def preProcess(s):
     s = s.replace("{", "(")
     # For closing bracket
     s = s.replace("}", ")")
+    # for left(
+    s = s.replace("\left", "(")
+    # for right)
+    s = s.replace("\\right", ")")
     return s
 
 def preProcessFrac(s):
@@ -26,16 +31,18 @@ def preProcessFrac(s):
                 count -= 1
             string += s[start]
             start += 1
-        val = eval(string)
+        val = latexEval(string)
         rep = "\\frac" + string
         s = s.replace(rep, str(val) + '/')
     return s
 
 def latexEval(s):
+    print(s)
     s = s.replace(" ", "")
     s = preProcess(s)
     # For Fraction
     s = preProcessFrac(s)
     return eval(s)
 
-# print(latexEval("\\frac{2^{6}}{4}"))
+# print(latexEval("3/2"))
+# print(latexEval("\\frac{3+\\frac{1}{2}+6}{\sqrt{4}+1}"))
