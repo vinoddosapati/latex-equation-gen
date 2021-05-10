@@ -571,7 +571,7 @@ __webpack_require__.r(__webpack_exports__);
 class ApiService {
     constructor(_http) {
         this._http = _http;
-        this.rootURL = '0.0.0.0:8080/';
+        this.rootURL = '';
         this.flaskURL = this.rootURL + 'imgdata/';
         this.calURL = this.rootURL + 'cal/';
         this.mathURL = this.rootURL + 'mathml/';
