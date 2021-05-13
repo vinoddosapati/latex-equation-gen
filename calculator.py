@@ -16,6 +16,8 @@ def preProcess(s):
     s = s.replace("\left", "(")
     # for right)
     s = s.replace("\\right", ")")
+    # for div
+    s = s.replace("\div", "/")
     return s
 
 def preProcessFrac(s):
