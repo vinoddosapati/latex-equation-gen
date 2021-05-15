@@ -9,7 +9,7 @@ from PIL import Image
 from processing import get_components
 from calculator import latexEval
 
-dest_path = '.\\savedata\\dict.csv'
+dest_path = 'dict.csv'
 df = pd.read_csv(dest_path, header=None, delimiter=',')
 key = dict(zip(df.iloc[:, 0], df.iloc[:, 1]))
 
@@ -159,6 +159,15 @@ def neworder(components, groups):
                 components[num[-1]]['output'] = components[num[-1]]['output'] + '}'
                 components[denom[0]]['output'] = '{' + components[denom[0]]['output']
                 components[denom[-1]]['output'] = components[denom[-1]]['output'] + '}'
+                new_numCom = {}
+                new_denCom = {}
+                for k1 in num:
+                    new_numCom[k1] = components[k1]
+                components = superscriptnums(new_numCom, components)
+
+                for k2 in denom:
+                    new_denCom[k2] = components[k2]
+                components = superscriptnums(new_denCom, components)
 
                 s += num
                 s += denom
@@ -175,6 +184,17 @@ def neworder(components, groups):
         components[denom[-1]]['output'] = components[denom[-1]]['output'] + '}'
         new_num = [components[j]["output"] for j in num]
         new_den = [components[j]["output"] for j in denom]
+
+        new_numCom = {}
+        new_denCom = {}
+        for k1 in num:
+            new_numCom[k1] = components[k1]
+        components = superscriptnums(new_numCom, components)
+
+        for k2 in denom:
+            new_denCom[k2] = components[k2]
+        components = superscriptnums(new_denCom, components)
+
         s += num
         s += denom
         num = []
